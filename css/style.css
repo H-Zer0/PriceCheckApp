@@ -1,0 +1,340 @@
+:root {
+    /* Global */
+    --bg-color: #FFFEF6;
+    /* Cream background */
+    --card-bg: #ffffff;
+    --text-primary: #4a4a4a;
+    --text-secondary: #757575;
+    --radius: 16px;
+
+    /* Product A Theme (Warm/Orange) */
+    --color-a: #FF9800;
+    --color-a-bg: #fff3e0;
+
+    /* Product B Theme (Cool/Blue) */
+    --color-b: #2196F3;
+    --color-b-bg: #e3f2fd;
+
+    --success-color: #ff5722;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Body Padding to prevent Bottom Nav overlap */
+body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    padding-bottom: calc(140px + env(safe-area-inset-bottom));
+}
+
+.app-token {
+    display: none;
+}
+
+.app-header {
+    background-color: var(--card-bg);
+    padding: 16px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 2px solid #eee;
+}
+
+.app-header h1 {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+}
+
+.app-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+.comparison-grid {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 600px) {
+    .comparison-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Product Card Base */
+.product-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    border: 2px solid transparent;
+    /* Preset for focus/winner */
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hover Animation */
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Product A Specifics */
+#product-a {
+    border-top: 6px solid var(--color-a);
+}
+
+#product-a .card-header h2 {
+    color: var(--color-a);
+}
+
+#product-a input:focus,
+#product-a select:focus {
+    border-color: var(--color-a);
+    box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.2);
+}
+
+/* Product B Specifics */
+#product-b {
+    border-top: 6px solid var(--color-b);
+}
+
+#product-b .card-header h2 {
+    color: var(--color-b);
+}
+
+#product-b input:focus,
+#product-b select:focus {
+    border-color: var(--color-b);
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+}
+
+/* Winner Styles */
+.product-card.winner {
+    border-color: var(--success-color);
+    background-color: #fff8f5;
+    /* Slight tint */
+    transform: scale(1.02);
+    z-index: 10;
+    box-shadow: 0 12px 24px rgba(255, 87, 34, 0.2);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.card-header h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.badge {
+    background-color: var(--success-color);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: bold;
+    padding: 4px 10px;
+    border-radius: 20px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.4s ease;
+}
+
+.product-card.winner .badge {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.input-group {
+    margin-bottom: 16px;
+}
+
+.input-row {
+    display: flex;
+    gap: 12px;
+}
+
+.input-row .input-group {
+    flex: 1;
+}
+
+.input-group.unit-select {
+    flex: 0 0 70px;
+}
+
+label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.optional {
+    font-weight: normal;
+    font-size: 0.75rem;
+    color: #aaa;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+    transition: all 0.2s;
+}
+
+.unit-price-display {
+    margin-top: 12px;
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+/* Result Area */
+.result-area {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.result-message {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    min-height: 1.5em;
+    color: var(--text-primary);
+}
+
+.secondary-btn {
+    background: white;
+    border: 1px solid #ccc;
+    color: #666;
+    padding: 8px 24px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+    background: #eee;
+    color: #333;
+}
+
+/* View Management */
+.view {
+    min-height: 80vh;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #ffffff;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    border-top: 1px solid #f0f0f0;
+    z-index: 1000;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    transition: all 0.2s;
+}
+
+.nav-item svg {
+    stroke: var(--text-secondary);
+    transition: all 0.2s;
+}
+
+.nav-item.active {
+    color: var(--success-color);
+    background-color: #fff3e0;
+}
+
+.nav-item.active svg {
+    stroke: var(--success-color);
+}
+
+/* Discount Calculator Styles */
+.discount-result {
+    margin-top: 24px;
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    border-radius: 12px;
+    color: #e65100;
+}
+
+.final-price {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.saved-amount {
+    font-size: 1rem;
+    margin-top: 4px;
+    opacity: 0.9;
+}
+
+/* Product A Input Focus */
+#product-a input:focus,
+#product-a select:focus {
+    background-color: var(--color-a-bg);
+}
+
+/* Product B Input Focus */
+#product-b input:focus,
+#product-b select:focus {
+    background-color: var(--color-b-bg);
+}

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>どっちがお得？ - 価格比較アプリ</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <header class="app-header">
+        <h1>どっちがお得？</h1>
+    </header>
+
+    <div id="view-comparison" class="view active">
+        <div class="comparison-grid">
+            <!-- Product A -->
+            <section class="product-card" id="product-a">
+                <div class="card-header">
+                    <h2>商品 A</h2>
+                    <span class="badge" id="badge-a">お得!</span>
+                </div>
+                <div class="input-group">
+                    <label>商品名 <span class="optional">(任意)</span></label>
+                    <input type="text" id="name-a" placeholder="例: 大袋">
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>価格 (円)</label>
+                        <input type="number" id="price-a" placeholder="0" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>内容量</label>
+                        <input type="number" id="amount-a" placeholder="0" inputmode="numeric">
+                    </div>
+                    <div class="input-group unit-select">
+                        <label>単位</label>
+                        <select id="unit-a">
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="ml">ml</option>
+                            <option value="L">L</option>
+                            <option value="ko">個</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="unit-price-display">
+                    単価: <span id="unit-price-a">---</span> 円/<span class="base-unit">g</span>
+                </div>
+            </section>
+
+            <!-- Product B -->
+            <section class="product-card" id="product-b">
+                <div class="card-header">
+                    <h2>商品 B</h2>
+                    <span class="badge" id="badge-b">お得!</span>
+                </div>
+                <div class="input-group">
+                    <label>商品名 <span class="optional">(任意)</span></label>
+                    <input type="text" id="name-b" placeholder="例: 小袋">
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>価格 (円)</label>
+                        <input type="number" id="price-b" placeholder="0" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label>内容量</label>
+                        <input type="number" id="amount-b" placeholder="0" inputmode="numeric">
+                    </div>
+                    <div class="input-group unit-select">
+                        <label>単位</label>
+                        <select id="unit-b">
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="ml">ml</option>
+                            <option value="L">L</option>
+                            <option value="ko">個</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="unit-price-display">
+                    単価: <span id="unit-price-b">---</span> 円/<span class="base-unit">g</span>
+                </div>
+            </section>
+        </div>
+
+        <!-- Result Area -->
+        <section class="result-area" id="result-area">
+            <div class="result-message" id="result-message">
+                値を入力してください
+            </div>
+            <button id="reset-btn" class="secondary-btn">リセット</button>
+        </section>
+    </div>
+
+    <!-- Discount Calculator View -->
+    <div id="view-discount" class="view" style="display: none;">
+        <section class="product-card" id="discount-card">
+            <div class="card-header">
+                <h2>割引計算</h2>
+            </div>
+            <div class="input-group">
+                <label>元の価格 (円)</label>
+                <input type="number" id="disc-price" placeholder="0" inputmode="numeric">
+            </div>
+
+            <div class="input-group">
+                <label>割引率 (%)</label>
+                <div class="input-row">
+                    <input type="number" id="disc-percent" placeholder="例: 20" inputmode="numeric">
+                </div>
+            </div>
+
+            <div class="discount-result">
+                <div class="final-price">
+                    <span id="disc-final-price">---</span> 円
+                </div>
+                <div class="saved-amount">
+                    (<span id="disc-saved">---</span> 円 お得)
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="disc-reset-btn" class="secondary-btn">リセット</button>
+            </div>
+        </section>
+    </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" data-target="view-comparison">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            <span>価格比較</span>
+        </a>
+        <a href="#" class="nav-item" data-target="view-discount">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="5" x2="5" y2="19"></line>
+                <circle cx="6.5" cy="6.5" r="2.5"></circle>
+                <circle cx="17.5" cy="17.5" r="2.5"></circle>
+            </svg>
+            <span>割引計算</span>
+        </a>
+    </nav>
+
+    <script src="js/logic.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
