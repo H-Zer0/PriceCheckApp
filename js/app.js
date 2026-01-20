@@ -4,7 +4,6 @@
 const inputs = {
     a: {
         card: document.getElementById('product-a'),
-        name: document.getElementById('name-a'),
         price: document.getElementById('price-a'),
         amount: document.getElementById('amount-a'),
         unit: document.getElementById('unit-a'),
@@ -13,7 +12,6 @@ const inputs = {
     },
     b: {
         card: document.getElementById('product-b'),
-        name: document.getElementById('name-b'),
         price: document.getElementById('price-b'),
         amount: document.getElementById('amount-b'),
         unit: document.getElementById('unit-b'),
@@ -83,12 +81,10 @@ function updateUI(comparisonResult) {
 
     if (comparisonResult.better === 'A') {
         inputs.a.card.classList.add('winner');
-        const nameA = inputs.a.name.value.trim() || '商品A';
-        resultArea.message.innerHTML = `<strong>${nameA}</strong> の方が <strong>約${comparisonResult.diffPercent}%</strong> お得！`;
+        resultArea.message.innerHTML = `<strong>商品A</strong> の方が <strong>約${comparisonResult.diffPercent}%</strong> お得！`;
     } else if (comparisonResult.better === 'B') {
         inputs.b.card.classList.add('winner');
-        const nameB = inputs.b.name.value.trim() || '商品B';
-        resultArea.message.innerHTML = `<strong>${nameB}</strong> の方が <strong>約${comparisonResult.diffPercent}%</strong> お得！`;
+        resultArea.message.innerHTML = `<strong>商品B</strong> の方が <strong>約${comparisonResult.diffPercent}%</strong> お得！`;
     } else if (comparisonResult.better === 'EQUAL') {
         resultArea.message.textContent = 'どちらも同じ単価です';
     }
@@ -120,12 +116,12 @@ function setupEventListeners() {
     const events = ['input', 'change'];
 
     // A inputs
-    [inputs.a.price, inputs.a.amount, inputs.a.unit, inputs.a.name].forEach(el => {
+    [inputs.a.price, inputs.a.amount, inputs.a.unit].forEach(el => {
         events.forEach(evt => el.addEventListener(evt, calculate));
     });
 
     // B inputs
-    [inputs.b.price, inputs.b.amount, inputs.b.unit, inputs.b.name].forEach(el => {
+    [inputs.b.price, inputs.b.amount, inputs.b.unit].forEach(el => {
         events.forEach(evt => el.addEventListener(evt, calculate));
     });
 
@@ -133,12 +129,10 @@ function setupEventListeners() {
     resultArea.resetBtn.addEventListener('click', () => {
         inputs.a.price.value = '';
         inputs.a.amount.value = '';
-        inputs.a.name.value = '';
         inputs.a.unit.value = 'g';
 
         inputs.b.price.value = '';
         inputs.b.amount.value = '';
-        inputs.b.name.value = '';
         inputs.b.unit.value = 'g';
 
         calculate(); // Recalculate to reset UI
@@ -147,7 +141,7 @@ function setupEventListeners() {
         inputs.a.card.classList.remove('winner');
         inputs.b.card.classList.remove('winner');
 
-        inputs.a.name.focus();
+        inputs.a.price.focus();
     });
 }
 
