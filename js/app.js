@@ -1,225 +1,125 @@
-// Logic functions are now global from logic.js
-
-// DOM Elements
-const inputs = {
-    a: {
-        card: document.getElementById('product-a'),
-        price: document.getElementById('price-a'),
-        amount: document.getElementById('amount-a'),
-        unit: document.getElementById('unit-a'),
-        unitPrice: document.getElementById('unit-price-a'),
-        badge: document.getElementById('badge-a')
-    },
-    b: {
-        card: document.getElementById('product-b'),
-        price: document.getElementById('price-b'),
-        amount: document.getElementById('amount-b'),
-        unit: document.getElementById('unit-b'),
-        unitPrice: document.getElementById('unit-price-b'),
-        badge: document.getElementById('badge-b')
+const byId = id => document.getElementById(id);
+const products = Object.fromEntries(['a', 'b'].map(key => [key, {
+    card: byId(`product-${key}`), price: byId(`price-${key}`), amount: byId(`amount-${key}`),
+    unit: byId(`unit-${key}`), display: byId(`unit-price-${key}`), error: byId(`error-${key}`)
+}]));
+const numberFormat = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1 });
+function formatNumber(value) {
+    if (value > 0 && value < 0.1) return value.toExponential(2);
+    return numberFormat.format(value);
+}
+const touched = new WeakSet();
+function validateField(field, amount = false, percent = false) {
+    const value = parseDecimal(field.value);
+    let error = '';
+    if (field.value.trim() && (value === null || (amount && value <= 0) || (percent && value > 100))) {
+        error = amount ? '内容量は0より大きい数値で入力してください。' : percent ? '割引率は0〜100で入力してください。' : '価格は0以上の数値で入力してください。';
+    } else if (!field.value.trim() && touched.has(field)) {
+        error = amount ? '内容量を入力してください。' : percent ? '割引率を入力してください。' : '価格を入力してください。';
     }
-};
-
-const resultArea = {
-    container: document.getElementById('result-area'),
-    message: document.getElementById('result-message'),
-    resetBtn: document.getElementById('reset-btn')
-};
-
-// State
-let state = {
-    a: { price: 0, amount: 0, unit: 'g' },
-    b: { price: 0, amount: 0, unit: 'g' }
-};
-
-/**
- * UIの更新
- */
-function updateUI(comparisonResult) {
-    // 1. Reset styles
-    inputs.a.card.classList.remove('winner');
-    inputs.b.card.classList.remove('winner');
-
-    // 2. Unit Prices
-    const updateUnitPrice = (inputObj, val, unit) => {
-        if (val === null || isNaN(val) || !isFinite(val)) {
-            inputObj.unitPrice.textContent = '---';
-            const baseUnitEl = inputObj.unitPrice.parentNode.querySelector('.base-unit');
-            if (baseUnitEl) baseUnitEl.textContent = unit === 'ko' ? '個' : (unit === 'ml' || unit === 'L' ? 'ml' : 'g');
-        } else {
-            let formatted = val;
-            if (val < 1) {
-                formatted = val.toPrecision(3);
-            } else {
-                formatted = val.toFixed(2);
-            }
-            inputObj.unitPrice.textContent = formatted;
-
-            const baseUnit = (inputObj.unit.value === 'ml' || inputObj.unit.value === 'L') ? 'ml' : (inputObj.unit.value === 'ko' ? '個' : 'g');
-            const baseUnitEl = inputObj.unitPrice.parentNode.querySelector('.base-unit');
-            if (baseUnitEl) baseUnitEl.textContent = baseUnit;
-        }
-    };
-
-    updateUnitPrice(inputs.a, comparisonResult.unitPriceA, inputs.a.unit.value);
-    updateUnitPrice(inputs.b, comparisonResult.unitPriceB, inputs.b.unit.value);
-
-    // 3. Result Message & Winner
-    if (comparisonResult.error) {
-        if (comparisonResult.error === 'Unit type mismatch') {
-            resultArea.message.textContent = '単位の種類が違います';
-            resultArea.message.style.color = '#ff5555';
-        } else {
-            // 入力途中など
-            resultArea.message.textContent = '値を入力してください';
-            resultArea.message.style.color = 'var(--text-primary)';
-        }
+    // 入力途中にはエラーを急いで出さない。結果は常に検証する。
+    const visible = touched.has(field) ? error : '';
+    field.setAttribute('aria-invalid', String(Boolean(visible)));
+    return { value: error ? null : value, error: visible };
+}
+function showError(element, message) {
+    element.textContent = message;
+    element.hidden = !message;
+}
+function calculate() {
+    const data = {};
+    for (const [key, product] of Object.entries(products)) {
+        const price = validateField(product.price);
+        const amount = validateField(product.amount, true);
+        data[key] = { price: price.value, amount: amount.value, unit: product.unit.value };
+        const unitPrice = calculateUnitPrice(price.value, amount.value, product.unit.value);
+        const info = UNITS[product.unit.value];
+        const basis = info.type === 'count' ? 1 : 100;
+        const scaled = unitPrice === null ? null : unitPrice * basis;
+        // 倍率をかけて表示できないほど大きい単価は1単位表示に戻す。
+        const displayBasis = scaled !== null && !Number.isFinite(scaled) ? 1 : basis;
+        product.display.textContent = `${displayBasis}${info.base}あたり：${unitPrice === null ? '—' : formatNumber(unitPrice * displayBasis)} 円`;
+        product.card.classList.remove('winner');
+        showError(product.error, price.error || amount.error || (price.value !== null && amount.value > 0 && unitPrice === null ? '数値が大きすぎるか、小さすぎます。' : ''));
+    }
+    const result = compareProducts(data.a, data.b);
+    const area = document.querySelector('.result-area');
+    const message = byId('result-message');
+    const note = byId('result-note');
+    delete area.dataset.winner;
+    if (result.error) {
+        message.textContent = result.error === 'Unit type mismatch' ? 'この単位の組み合わせは比較できません' : '2つの商品の価格と内容量を入力';
+        note.textContent = result.error === 'Unit type mismatch' ? '重さ同士、容量同士、個数同士で比較してください。' : '入力すると、自動で比較します。';
         return;
     }
-
-    resultArea.message.style.color = 'var(--text-primary)';
-
-    if (comparisonResult.better === 'A') {
-        inputs.a.card.classList.add('winner');
-        resultArea.message.innerHTML = `<strong>商品A</strong> の方が <strong>約${comparisonResult.diffPercent}%</strong> お得！`;
-    } else if (comparisonResult.better === 'B') {
-        inputs.b.card.classList.add('winner');
-        resultArea.message.innerHTML = `<strong>商品B</strong> の方が <strong>約${comparisonResult.diffPercent}%</strong> お得！`;
-    } else if (comparisonResult.better === 'EQUAL') {
-        resultArea.message.textContent = 'どちらも同じ単価です';
-    }
-}
-
-/**
- * 計算実行
- */
-function calculate() {
-    // 値の取得
-    const getData = (key) => ({
-        price: parseFloat(inputs[key].price.value),
-        amount: parseFloat(inputs[key].amount.value),
-        unit: inputs[key].unit.value
-    });
-
-    state.a = getData('a');
-    state.b = getData('b');
-
-    // 計算
-    const result = compareProducts(state.a, state.b);
-    updateUI(result);
-}
-
-/**
- * イベントリスナー設定
- */
-function setupEventListeners() {
-    const events = ['input', 'change'];
-
-    // A inputs
-    [inputs.a.price, inputs.a.amount, inputs.a.unit].forEach(el => {
-        events.forEach(evt => el.addEventListener(evt, calculate));
-    });
-
-    // B inputs
-    [inputs.b.price, inputs.b.amount, inputs.b.unit].forEach(el => {
-        events.forEach(evt => el.addEventListener(evt, calculate));
-    });
-
-    // Reset button
-    resultArea.resetBtn.addEventListener('click', () => {
-        inputs.a.price.value = '';
-        inputs.a.amount.value = '';
-        inputs.a.unit.value = 'g';
-
-        inputs.b.price.value = '';
-        inputs.b.amount.value = '';
-        inputs.b.unit.value = 'g';
-
-        calculate(); // Recalculate to reset UI
-
-        // Visual Reset
-        inputs.a.card.classList.remove('winner');
-        inputs.b.card.classList.remove('winner');
-
-        inputs.a.price.focus();
-    });
-}
-
-// Initialize
-setupEventListeners();
-
-/**
- * 割引計算機能
- */
-const discountInputs = {
-    price: document.getElementById('disc-price'),
-    customPercent: document.getElementById('disc-percent'),
-    resultPrice: document.getElementById('disc-final-price'),
-    savedAmount: document.getElementById('disc-saved'),
-    resetBtn: document.getElementById('disc-reset-btn')
-};
-
-function calculateDiscountUI() {
-    const price = parseFloat(discountInputs.price.value);
-    const percent = parseFloat(discountInputs.customPercent.value);
-
-    const result = calculateDiscount(price, percent);
-
-    if (result) {
-        discountInputs.resultPrice.textContent = result.finalPrice.toLocaleString();
-        discountInputs.savedAmount.textContent = result.saved.toLocaleString();
+    if (result.better === 'EQUAL') {
+        message.textContent = 'どちらも同じお得さです';
     } else {
-        discountInputs.resultPrice.textContent = '---';
-        discountInputs.savedAmount.textContent = '---';
+        const percent = result.diffPercent < 0.1 ? '0.1%未満' : `約${numberFormat.format(result.diffPercent)}%`;
+        message.textContent = `商品${result.better}が${percent}お得！`;
+        products[result.better.toLowerCase()].card.classList.add('winner');
+        area.dataset.winner = result.better;
     }
+    note.textContent = '同じ内容量あたりの価格で比較しています。';
 }
-
-function setupDiscountListeners() {
-    // Inputs
-    ['input', 'change'].forEach(evt => {
-        discountInputs.price.addEventListener(evt, calculateDiscountUI);
-        discountInputs.customPercent.addEventListener(evt, calculateDiscountUI);
-    });
-
-    // Reset
-    discountInputs.resetBtn.addEventListener('click', () => {
-        discountInputs.price.value = '';
-        discountInputs.customPercent.value = '';
-        calculateDiscountUI();
+function calculateDiscountUI() {
+    const price = validateField(byId('disc-price'));
+    const percent = validateField(byId('disc-percent'), false, true);
+    const result = calculateDiscount(price.value, percent.value);
+    byId('disc-final-price').textContent = result ? formatNumber(result.finalPrice) : '—';
+    byId('disc-saved').textContent = result ? formatNumber(result.saved) : '—';
+    showError(byId('disc-error'), price.error || percent.error);
+}
+function bindFields(fields, update) {
+    fields.forEach(field => {
+        field.addEventListener(field.tagName === 'SELECT' ? 'change' : 'input', update);
+        field.addEventListener('blur', () => { touched.add(field); update(); });
     });
 }
+bindFields(Object.values(products).flatMap(product => [product.price, product.amount, product.unit]), calculate);
+bindFields([byId('disc-price'), byId('disc-percent')], calculateDiscountUI);
 
-/**
- * タブナビゲーション
- */
-function setupTabNavigation() {
-    const navItems = document.querySelectorAll('.nav-item');
-    const views = document.querySelectorAll('.view');
-
-    navItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent anchor jump
-            const targetId = item.dataset.target;
-
-            // Update Nav
-            navItems.forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
-
-            // Update Views
-            views.forEach(view => {
-                if (view.id === targetId) {
-                    view.style.display = 'block';
-                    // Trigger reflow/animation if needed
-                    view.classList.add('active');
-                } else {
-                    view.style.display = 'none';
-                    view.classList.remove('active');
-                }
-            });
+function setupReset(resetId, undoId, fields, update) {
+    let previous = null;
+    const undo = byId(undoId);
+    byId(resetId).addEventListener('click', () => {
+        if (!fields.some(field => field.value !== (field.tagName === 'SELECT' ? 'g' : ''))) return;
+        previous = fields.map(field => ({ value: field.value, touched: touched.has(field) }));
+        fields.forEach(field => { field.value = field.tagName === 'SELECT' ? 'g' : ''; touched.delete(field); });
+        undo.hidden = false;
+        update();
+    });
+    undo.addEventListener('click', () => {
+        if (!previous) return;
+        fields.forEach((field, index) => {
+            field.value = previous[index].value;
+            if (previous[index].touched) touched.add(field); else touched.delete(field);
         });
+        undo.hidden = true;
+        previous = null;
+        update();
+        byId(resetId).focus();
     });
 }
+setupReset('reset-btn', 'undo-btn', Object.values(products).flatMap(product => [product.price, product.amount, product.unit]), calculate);
+setupReset('disc-reset-btn', 'disc-undo-btn', [byId('disc-price'), byId('disc-percent')], calculateDiscountUI);
 
-// Init New Features
-setupDiscountListeners();
-setupTabNavigation();
+const navItems = [...document.querySelectorAll('.nav-item')];
+navItems.forEach(item => item.addEventListener('click', () => {
+    navItems.forEach(nav => {
+        const active = nav === item;
+        nav.classList.toggle('active', active);
+        nav.setAttribute('aria-pressed', String(active));
+        byId(nav.dataset.target).hidden = !active;
+    });
+}));
+// Enterで価格→内容量→次の商品へ。最後の項目ではキーボードを閉じる。
+[[ 'price-a', 'amount-a', 'price-b', 'amount-b' ], [ 'disc-price', 'disc-percent' ]].forEach(ids => {
+    ids.forEach((id, index) => byId(id).addEventListener('keydown', event => {
+        if (event.key !== 'Enter' || event.isComposing) return;
+        event.preventDefault();
+        if (ids[index + 1]) byId(ids[index + 1]).focus(); else byId(id).blur();
+    }));
+});
+calculate();
+calculateDiscountUI();

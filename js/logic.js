@@ -1,108 +1,56 @@
-/**
- * 単位定義と変換係数
- * 基準単位: g (重さ), ml (容量), 個 (個数)
- */
+/** 基準単位は g・mL・個。異なる種類の単位は比較しない。 */
 const UNITS = {
-  g: { base: 'g', factor: 1, type: 'weight' },
-  kg: { base: 'g', factor: 1000, type: 'weight' },
-  ml: { base: 'ml', factor: 1, type: 'volume' },
-  L: { base: 'ml', factor: 1000, type: 'volume' },
-  ko: { base: '個', factor: 1, type: 'count', label: '個' } // 'ko' is used for internal ID, label for display if needed
+    g: { base: 'g', factor: 1, type: 'weight' },
+    kg: { base: 'g', factor: 1000, type: 'weight' },
+    ml: { base: 'mL', factor: 1, type: 'volume' },
+    L: { base: 'mL', factor: 1000, type: 'volume' },
+    ko: { base: '個', factor: 1, type: 'count' }
 };
 
-/**
- * 内容量を基準単位に正規化する
- * @param {number} amount - 内容量
- * @param {string} unit - 単位 (g, kg, ml, L, ko)
- * @returns {object} { amount: number, unit: string, type: string }
- */
+// 全角数字・小数点も受け付ける。途中まで有効な文字列を数値化しない。
+function parseDecimal(value) {
+    const text = String(value).normalize('NFKC').trim();
+    if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) return null;
+    const number = Number(text);
+    return Number.isFinite(number) && number <= Number.MAX_SAFE_INTEGER ? number : null;
+}
+
 function normalize(amount, unit) {
-  const unitInfo = UNITS[unit];
-  if (!unitInfo) {
-    throw new Error(`Unknown unit: ${unit}`);
-  }
-  return {
-    amount: amount * unitInfo.factor,
-    unit: unitInfo.base,
-    type: unitInfo.type
-  };
+    const info = UNITS[unit];
+    if (!info) return null;
+    return { amount: amount * info.factor, unit: info.base, type: info.type };
 }
 
-/**
- * 単価を計算する (価格 / 正規化された内容量)
- * @param {number} price - 価格
- * @param {number} amount - 内容量
- * @param {string} unit - 単位
- * @returns {number|null} 単価 (単位あたりの価格) または 計算不可の場合 null
- */
 function calculateUnitPrice(price, amount, unit) {
-  if (!price || !amount || !unit) return null;
-  const normalized = normalize(amount, unit);
-  if (normalized.amount === 0) return null;
-  return price / normalized.amount;
+    if (!Number.isFinite(price) || price < 0 || price > Number.MAX_SAFE_INTEGER ||
+        !Number.isFinite(amount) || amount <= 0 || amount > Number.MAX_SAFE_INTEGER) return null;
+    const normalized = normalize(amount, unit);
+    if (!normalized || !Number.isFinite(normalized.amount) || normalized.amount <= 0) return null;
+    const result = price / normalized.amount;
+    // オーバーフロー・アンダーフローを無料や有効な単価として扱わない。
+    return Number.isFinite(result) && (price === 0 || result > 0) ? result : null;
 }
 
-/**
- * 2つの商品を比較する
- * @param {object} productA - { price, amount, unit }
- * @param {object} productB - { price, amount, unit }
- * @returns {object} 比較結果
- */
 function compareProducts(productA, productB) {
-  const unitPriceA = calculateUnitPrice(productA.price, productA.amount, productA.unit);
-  const unitPriceB = calculateUnitPrice(productB.price, productB.amount, productB.unit);
-
-  if (unitPriceA === null || unitPriceB === null) {
-    return { error: 'Invalid input' };
-  }
-
-  // 単位タイプが異なる場合は比較不可 (例: g と ml)
-  // ただし、簡易化のためUI側で制御する前提とし、ここでは計算できれば比較する
-  // 厳密には type チェックを入れるべき
-  const typeA = UNITS[productA.unit].type;
-  const typeB = UNITS[productB.unit].type;
-  if (typeA !== typeB) {
-    return { error: 'Unit type mismatch' };
-  }
-
-  let better = null;
-  let diffPercent = 0;
-
-  if (unitPriceA < unitPriceB) {
-    better = 'A';
-    diffPercent = ((unitPriceB - unitPriceA) / unitPriceB) * 100;
-  } else if (unitPriceB < unitPriceA) {
-    better = 'B';
-    diffPercent = ((unitPriceA - unitPriceB) / unitPriceA) * 100;
-  } else {
-    better = 'EQUAL';
-    diffPercent = 0;
-  }
-
-  return {
-    better,
-    diffPercent: Math.round(diffPercent * 10) / 10, // 小数点第1位まで
-    unitPriceA,
-    unitPriceB,
-    baseUnit: UNITS[productA.unit].base
-  };
+    const unitPriceA = calculateUnitPrice(productA.price, productA.amount, productA.unit);
+    const unitPriceB = calculateUnitPrice(productB.price, productB.amount, productB.unit);
+    if (unitPriceA === null || unitPriceB === null) return { error: 'Invalid input' };
+    if (UNITS[productA.unit].type !== UNITS[productB.unit].type) return { error: 'Unit type mismatch' };
+    // 同じ単価の浮動小数点誤差だけを許容する。
+    const equal = Math.abs(unitPriceA - unitPriceB) <= Number.EPSILON * 4 * Math.max(unitPriceA, unitPriceB);
+    const better = equal ? 'EQUAL' : unitPriceA < unitPriceB ? 'A' : 'B';
+    const high = Math.max(unitPriceA, unitPriceB);
+    return {
+        better,
+        diffPercent: equal ? 0 : ((high - Math.min(unitPriceA, unitPriceB)) / high) * 100,
+        unitPriceA, unitPriceB, baseUnit: UNITS[productA.unit].base
+    };
 }
 
-/**
- * 割引価格を計算する
- * @param {number} price - 元の価格
- * @param {number} percent - 割引率 (%)
- * @returns {object} { finalPrice: number, saved: number }
- */
+/** 既存仕様：値引き額の1円未満を切り捨てる。 */
 function calculateDiscount(price, percent) {
-  if (!price || price < 0) return null;
-  if (!percent || percent < 0) return { finalPrice: price, saved: 0 };
-  
-  const discountAmount = Math.floor(price * (percent / 100)); // 値引き額 (切り捨て)
-  const finalPrice = price - discountAmount;
-  
-  return {
-    finalPrice,
-    saved: discountAmount
-  };
+    if (!Number.isFinite(price) || price < 0 || price > Number.MAX_SAFE_INTEGER ||
+        !Number.isFinite(percent) || percent < 0 || percent > 100) return null;
+    const saved = Math.floor(price * (percent / 100));
+    return { finalPrice: price - saved, saved };
 }
